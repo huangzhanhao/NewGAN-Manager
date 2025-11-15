@@ -2,9 +2,7 @@ import os
 import logging
 import shutil
 from shutil import copyfileobj
-from datetime import datetime
 from .ConfigManager import ConfigManager
-
 
 class ProfileManager(ConfigManager):
     def __init__(self, name, root_dir):
@@ -91,60 +89,8 @@ class ProfileManager(ConfigManager):
                 self.config["Profile"][key] = False
         self.cur_prf = name
 
-    def write_xml(self, data, save_backup=True):
-        """
-        Write config.xml file with player mappings
-        Args:
-            data (list): List of player mapping data
-            save_backup (bool): Whether to backup the original config.xml before writing
-        Returns:
-            list: List of XML strings that were written
-        """
-        config_path = os.path.join(self.prf_cfg["img_dir"], "config.xml")
-        template_path = os.path.join(self.root_dir, ".config", "config_template")
-        try:
-            # Backup original config.xml if needed
-            if save_backup:
-                timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-                backup_path = os.path.join(self.prf_cfg["img_dir"], f"config备份_{timestamp}.xml")
-                if os.path.isfile(config_path):
-                    shutil.copy2(config_path, backup_path)
-                    # 最多保存10个备份文件，如果超过则删除最旧的备份
-                    import glob
-                    backup_pattern = os.path.join(self.prf_cfg["img_dir"], "config备份_*.xml")
-                    backup_files = glob.glob(backup_pattern)
-                    if len(backup_files) > 10:
-                        backup_files.sort()
-                        files_to_remove = len(backup_files) - 10
-                        for i in range(files_to_remove):
-                            os.remove(backup_files[i])
-            with open(template_path, "r", encoding="UTF-8") as fp:
-                config_template = fp.read()
-                xml_string = []
-            for dat in data:
-                xml_string.append(
-                    '<record from="{}" to="graphics/pictures/person/{}/portrait"/>'.format(
-                        dat[1] + "/" + dat[2], dat[0]
-                    )
-                )
-            xml_players = "\n                ".join(xml_string)
-            xml_config = config_template.replace("[players]", xml_players)
-            config_path = os.path.join(self.prf_cfg["img_dir"], "config.xml")
-            with open(config_path, "w", encoding="UTF-8") as fp:
-                fp.write(xml_config)
-            return xml_string
-        except FileNotFoundError:
-            self.logger.error(f"Config_template file not found: {template_path}")
-            raise
-        except PermissionError as e:
-            self.logger.error(f"Permission denied when accessing config.xml file: {e}")
-            raise
-        except OSError as e:
-            self.logger.error(f"OS error occurred while writing config.xml file: {e}")
-            raise
-        except Exception as e:
-            self.logger.error(f"Unexpected error while writing config.xml file: {e}")
-            raise
+
+
 
     def swap_xml(self, deact_name, act_name, deact_img_dir, act_img_dir):
         """
