@@ -1,5 +1,7 @@
 # NewGAN Manager
 
+> **已归档 / Archived**：本仓库保留 v1（Python / Toga）版本，不再维护。v2 已独立为 [FM24 NewGen Panel](https://github.com/huangzhanhao/FM24-NewGen-Panel)（Tauri 2 + Rust + Svelte 5），请前往新仓库下载、提 issue 与查看文档。
+
 > 给 Football Manager 的 NewGAN / 随机人批量匹配头像（facepack）的桌面工具。
 > 读取 FM 导出的 RTF 名单 → 按「国籍 + 种族」自动挑一张头像图片 → 生成 FM 能识别的 `config.xml`。
 
