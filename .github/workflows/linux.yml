@@ -1,0 +1,21 @@
+name: Linux
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    uses: ./.github/workflows/ci.yml
+
+  build:
+    needs: test
+    uses: ./.github/workflows/_build.yml
+    with:
+      os: ubuntu-24.04
+      label: Linux
+      packaging_format: deb
+      artifact_pattern: dist/*.deb

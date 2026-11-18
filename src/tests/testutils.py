@@ -15,12 +15,12 @@ TESTING_DATA = os.path.join(TESTS_DIR, "testing_data")
 def copy_testing_data():
     """把 testing_data 完整复制到临时目录，返回副本路径；调用方负责清理
 
-    testing_data 目前不纳入版本控制，缺失时把相关用例记为跳过而非失败。
+    testing_data 随仓库分发；若被手工清理而缺失，相关用例记为跳过而非失败。
     """
     if not os.path.isdir(TESTING_DATA):
         raise unittest.SkipTest(
-            "testing_data 未纳入版本控制（暂不跟踪），跳过依赖该夹具的用例；"
-            "重建测试数据后自动恢复"
+            "testing_data 缺失，跳过依赖该夹具的用例；"
+            "用 git checkout -- src/tests/testing_data 恢复"
         )
     tmp = tempfile.mkdtemp(prefix="newgan_test_")
     dst = os.path.join(tmp, "testing_data")

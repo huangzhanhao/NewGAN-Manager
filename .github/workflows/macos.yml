@@ -1,0 +1,22 @@
+name: macOS
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    uses: ./.github/workflows/ci.yml
+
+  build:
+    needs: test
+    uses: ./.github/workflows/_build.yml
+    with:
+      os: macos-15
+      label: macOS
+      packaging_format: dmg
+      artifact_pattern: dist/*.dmg
+      adhoc_sign: true

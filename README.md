@@ -5,11 +5,12 @@
 > 给 Football Manager 的 NewGAN / 随机人批量匹配头像（facepack）的桌面工具。
 > 读取 FM 导出的 RTF 名单 → 按「国籍 + 种族」自动挑一张头像图片 → 生成 FM 能识别的 `config.xml`。
 
-![Windows](https://github.com/huangzhanhao/NewGAN-Manager-ByHzH/workflows/Windows/badge.svg)
-![Linux](https://github.com/huangzhanhao/NewGAN-Manager-ByHzH/workflows/Linux/badge.svg)
-![MacOS](https://github.com/huangzhanhao/NewGAN-Manager-ByHzH/workflows/MacOS/badge.svg)
+![Windows](https://github.com/huangzhanhao/NewGAN-Manager/workflows/Windows/badge.svg)
+![Linux](https://github.com/huangzhanhao/NewGAN-Manager/workflows/Linux/badge.svg)
+![macOS](https://github.com/huangzhanhao/NewGAN-Manager/workflows/macOS/badge.svg)
+![Release](https://github.com/huangzhanhao/NewGAN-Manager/workflows/Release/badge.svg)
 
-**当前版本 v1.4.4** ｜ Fork 自 [Maradonna90/NewGAN-Manager](https://github.com/Maradonna90/NewGAN-Manager)（上游已停止维护）｜ 图形界面基于 [BeeWare / Toga](https://beeware.org/)，支持 Windows、macOS、Linux。
+**当前版本 v1.5** ｜ Fork 自 [Maradonna90/NewGAN-Manager](https://github.com/Maradonna90/NewGAN-Manager)（上游已停止维护）｜ 图形界面基于 [BeeWare / Toga](https://beeware.org/)，支持 Windows、macOS、Linux。
 
 ---
 
@@ -21,17 +22,41 @@ NewGAN（随机人）默认没有头像。手动给成百上千名随机人一�
 
 ---
 
-## 主要功能
+## 主要功能以及对比原版改动
 
-- **多 Profile 管理**：不同头像包 / 不同存档各建一套 Profile（记录头像包目录、RTF、映射快照）。切换 Profile 时自动把当前 `config.xml` 备份回 `.user/<Profile>.xml`，再把目标快照写回头像包目录。
+### 主要功能
+
+- **多 Profile 管理**：不同头像包 / 不同存档各建一套 Profile，Profile 内含多个「组」（以头像包目录为标识），每组各自记录 RTF 与 `config.xml` 快照。切换 Profile 时自动保存旧档各组的映射、恢复目标档快照。
 - **中文数据库支持**：可识别中文表头、中文国籍的 RTF。国籍中文名会先经 `.config/nat_translation.json` 翻译回英文三字码再查种族映射——**无需把 FM 切成英文**。
 - **只处理随机人**：`only for NewGAN players` 开关按 RTF 最后一列（`Yes/No`、`是/否`）过滤，只给随机人换脸，被过滤者不写入 `config.xml`。
 - **三种替换模式**：`Preserve` 保留已换过的只补新的；`Overwrite` 对名单内球员全部重抽、名单外保留；`Generate` 无视现有 `config.xml` 从零生成。
-- **单个球员微调**：底部 Viewer 区输入 UID → 预览当前头像与球员uid信息→ 选一张图 `Replace it`，只改写这一条映射。
+- **单个球员微调**：底部 Viewer 区输入 UID → 预览当前头像与球员 uid 信息 → 选一张图 `Replace it`，只改写这一条映射。
 - **自动备份**：每次写入前生成 `config备份_YYYYMMDD-HHMMSS.xml`，每个头像包目录最多保留最近 10 份。
-- **进度与取消**：`Replace Faces` 带进度条与状态文字，解析/映射/写文件放线程池执行避免界面卡死，执行中可 `Cancel`。
+- **进度与取消**：`Replace Faces` 带进度条与状态文字，解析/映射/写文件放线程池执行避免界面卡死，执行中可逐球员中断。
 - **应用内日志面板**：`Log` 标签可按级别筛选、只看某一级、一键打开日志、清空显示；日志文件 10 MB × 3 份滚动。
 - **缺失目录提示创建**：头像包缺少某种族子目录时逐个询问是否创建。
+- **单元测试**：`src/tests/` 覆盖 `FaceMapper` / `ProfileManager` / `RtfParser` 三个核心模块，CI 在 push / PR 时自动运行。
+
+### 对比原版（Maradonna90/NewGAN-Manager）改动
+
+原版上游已停止维护。本 fork 在其基础上主要做了以下改动：
+
+| 方面 | 原版 | 本 fork（v1.5） |
+| :--- | :--- | :--- |
+| 代码结构 | 逻辑集中在单个 `app.py` + 平铺的 `mapper.py` / `rtf_parser.py` / `config_manager.py` | 拆为 `core/`（映射、解析、xml、日志、Profile）+ `services/`（编排）+ `app_*.py`（UI）三层，UI 与业务解耦 |
+| 界面组织 | 单窗口按钮 + 标签 | `Main` / `Profile` / `Log` 三个标签 + 底部 `Viewer` 单球员区 |
+| 语言支持 | 仅英文，需把 FM 切英文 UK、用默认皮肤 | 额外支持中文表头与中文国籍 RTF，内置国籍中英对照翻译 |
+| 随机人过滤 | 无专门开关 | `only for NewGAN players` 按导出 RTF 的「是否为随机人」列过滤；配套 14 列扩展视图 |
+| 单个球员换脸 | 无，只能整批替换 | Viewer 输入 UID 预览 + 单人 `Replace it`，只改一条映射 |
+| 映射备份 | 无 | 每次写 `config.xml` 前自动备份，按目录保留最近 10 份 |
+| Profile 模型 | 一套 Profile = 一套目录 / RTF / 快照 | Profile 下按头像包目录分组，每组独立管理 RTF 与快照，切换时保存/恢复全部组 |
+| 数据目录 | 运行时数据写应用安装目录，权限易出错 | 用户数据写平台标准数据目录（`paths.data`），启动时自动迁移旧版 `.user/` |
+| 日志 | 写安装目录，无应用内面板 | `Log` 标签分级筛选 / 打开 / 清空，10 MB × 3 滚动 |
+| FM 视图 | 旧版 `.fmf` 视图，导出列较少 | 换用 2025 年修订的新版视图，导出列更全（14 列，含随机人标识等），并补齐 team squad；与 FM 游戏版本无关 |
+| 测试 | 少量样例 RTF，`test_app.py` 为空壳 | 三个核心模块的单元测试 + GitHub Actions CI（Python 3.12.10） |
+| 打包与更新 | 上游 releases | 自建三端（Windows / macOS / Linux）构建工作流与 Release |
+
+> Profile 切换的映射保存/恢复由 `ProfileManager` 完成；此前同目录下的 `core/ConfigManager.py` 已废弃、无人引用，仅作历史残留保留。
 
 ---
 
@@ -113,15 +138,15 @@ Viewer 区输入该球员 UID 回车 → 查看当前头像 → `Browse` 选一�
 ## 项目结构
 
 ```
-NewGAN-Manager-ByHzH/
-├── .github/workflows/          # CI：windows/mac/linux 打包 + test.yml 单元测试
+NewGAN-Manager/
+├── .github/workflows/          # CI：ci.yml 单测；windows/linux/macos.yml 三端打包；release.yml 出 Release
 ├── docs/                       # 设计与说明文档（架构、种族分类说明、示例数据）
 ├── filters/                    # FM 过滤器（.fmf），复制到 FM 目录，用于只看随机人
 ├── views/                      # FM 视图（.fmf），导出 RTF 用，复制到 FM 目录
 ├── src/newganmanager/          # 应用主包
 │   ├── __main__.py / app.py    # 入口 + 主应用（窗口、启动、异步、错误处理）
 │   ├── app_main_tab.py         # Main 标签：Profile / 目录 / RTF / Mode / 执行
-│   ├── app_profile_tab.py      # Profile 标签（当前为占位）
+│   ├── app_profile_tab.py      # Profile 标签：当前 Profile 的组（头像包目录）列表与增删切
 │   ├── app_log_tab.py          # Log 标签：应用内日志面板
 │   ├── app_viewer.py           # Viewer 区：单球员预览与换脸
 │   ├── .config/                # 只读配置：eth_cfg.json / nat_translation.json / config_template
@@ -150,7 +175,7 @@ NewGAN-Manager-ByHzH/
 ## 开发与打包
 
 ```bash
-# 1) 建环境（需 Python 3.12.10）并安装依赖
+# 1) 建环境（需 Python 3.12+）并安装依赖
 pip install -r requirements.txt        # 或：pip install toga requests dhooks
 
 # 2) 源码运行：在 src/ 目录下以模块方式启动（包用了相对导入，必须 -m）
@@ -158,7 +183,7 @@ cd src && python -m newganmanager
 #    或用 briefcase 开发者模式（项目根目录）
 python -m briefcase dev
 
-# 3) 单元测试（覆盖 FaceMapper / ProfileManager / RtfParser，CI 由 test.yml 运行）
+# 3) 单元测试（覆盖 FaceMapper / ProfileManager / RtfParser，CI 由 ci.yml 运行）
 python -m unittest discover -s src/tests -p "test*.py"
 
 # 4) 打包
@@ -214,7 +239,6 @@ newgan.log              运行日志（10 MB × 3 滚动）
 
 ## 已知问题与待办
 
-- `Profile` 标签页目前是空占位（Profile 管理仍在 `Main` 标签内）。
 - `check_for_update()` 指向的是上游仓库，暂未接入本分支版本源，UI 未调用。
 - 头像包目录含中文/特殊字符路径时，个别系统上图片预览可能加载失败。
 - `src/tests/` 已覆盖 FaceMapper / ProfileManager / RtfParser 三个核心模块，其余模块（XmlParser、SourceSelection、UI）测试待补。

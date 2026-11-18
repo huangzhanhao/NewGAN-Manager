@@ -1,0 +1,21 @@
+name: Windows
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    uses: ./.github/workflows/ci.yml
+
+  build:
+    needs: test
+    uses: ./.github/workflows/_build.yml
+    with:
+      os: windows-latest
+      label: Windows
+      packaging_format: msi
+      artifact_pattern: dist/*.msi
