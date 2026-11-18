@@ -1,0 +1,110 @@
+name: Release
+
+# 三端打包并汇总上传到 GitHub Release。
+# 直接复用 windows.yml / linux.yml / macos.yml（它们同时支持 workflow_call），
+# 打包逻辑只在各平台文件里维护一份。
+# 手动触发可用 inputs.tag 指定 tag；留空则取 version 文件（如 v1.5）。
+# push tag（v*）同样触发，tag 名以实际 ref 为准。
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag（留空则用 version 文件生成 v<版本>）'
+        required: false
+        default: ''
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    uses: ./.github/workflows/windows.yml
+
+  linux:
+    uses: ./.github/workflows/linux.yml
+
+  macos:
+    uses: ./.github/workflows/macos.yml
+
+  publish:
+    name: Publish Release
+    needs: [ windows, linux ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: dist
+          pattern: NewGAN-Manager-*
+          merge-multiple: true
+
+      - name: Resolve tag
+        id: tag
+        run: |
+          TAG="${{ inputs.tag }}"
+          if [ -z "$TAG" ] && [ "${{ github.ref_type }}" = "tag" ]; then
+            TAG="${{ github.ref_name }}"
+          fi
+          if [ -z "$TAG" ]; then
+            TAG="v$(cat version)"
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Upload to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ steps.tag.outputs.tag }}"
+          ls -l dist
+          # 文件名去掉空格，下载链接更好用
+          for f in dist/*; do
+            base=$(basename "$f" | tr ' ' '-')
+            [ "$(basename "$f")" != "$base" ] && mv "$f" "dist/$base"
+          done
+          gh release view "$TAG" >/dev/null 2>&1 \
+            || gh release create "$TAG" \
+                 --title "NewGAN Manager $TAG" \
+                 --notes "自动化构建产物：Windows（.msi）、Linux（.deb）、macOS（.dmg，ad-hoc 签名）。" \
+                 --target "$GITHUB_SHA"
+          gh release upload "$TAG" dist/* --clobber
+
+  # macOS runner 排队时间不可控（公共仓库常见数十分钟，排队超时还会被取消）。
+  # 因此把 .dmg 拆成独立 job：主 Release 不被 macOS 阻塞，出队后自动补传。
+  publish-macos:
+    name: Attach macOS asset
+    needs: [ macos ]
+    if: needs.macos.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Download macOS artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: NewGAN-Manager-macOS
+          path: dist
+
+      - name: Resolve tag
+        id: tag
+        run: |
+          TAG="${{ inputs.tag }}"
+          if [ -z "$TAG" ] && [ "${{ github.ref_type }}" = "tag" ]; then
+            TAG="${{ github.ref_name }}"
+          fi
+          if [ -z "$TAG" ]; then
+            TAG="v$(cat version)"
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Upload dmg
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ steps.tag.outputs.tag }}"
+          gh release view "$TAG" >/dev/null 2>&1 || exit 0
+          gh release upload "$TAG" dist/* --clobber

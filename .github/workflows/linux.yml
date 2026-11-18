@@ -1,0 +1,62 @@
+name: Linux
+
+# 既可作为入口运行（push / PR / 手动），也可被 release.yml 以 workflow_call 复用。
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  # 被 release.yml 调用时它已先跑过 ci.yml，这里跳过以免重复单测；
+  # needs 的 job 被跳过时下游默认也会跳过，故 build 的 if 里显式放行 skipped。
+  test:
+    if: github.event_name != 'workflow_call'
+    uses: ./.github/workflows/ci.yml
+
+  build:
+    name: Build (Linux)
+    needs: test
+    if: always() && (needs.test.result == 'success' || needs.test.result == 'skipped')
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      # 不装 setup-python：briefcase 的 Linux system 后端会校验
+      # 「运行 briefcase 的 Python 主次版本 == /usr/bin/python3 的主次版本」，
+      # 装 setup-python 会让两者错位（如 3.12.16 vs 系统 3.12.3）并直接报错退出。
+      - name: Install system dependencies (toga-gtk)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgirepository1.0-dev libgirepository-2.0-dev libcairo2-dev \
+            libpango1.0-dev libgdk-pixbuf-2.0-dev libgtk-3-dev \
+            libwebkit2gtk-4.1-dev gir1.2-webkit2-4.1 python3-venv python3-dev
+
+      - name: Prepare system python3
+        run: |
+          python3 --version
+          python3 -m venv .ci-venv
+          echo "$PWD/.ci-venv/bin" >> "$GITHUB_PATH"
+
+      - name: Install Briefcase
+        run: python -m pip install "briefcase==0.3.25"
+
+      - name: Create and build
+        run: |
+          python -m briefcase create
+          python -m briefcase build
+
+      # deb 打包要求：根目录有 CHANGELOG.md、pyproject 有 long_description、
+      # resources 下有 newganmanager-{16..512}.png，缺任意一项都会中断。
+      - name: Package
+        run: python -m briefcase package -p deb
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: NewGAN-Manager-Linux
+          path: dist/*.deb
+          if-no-files-found: error

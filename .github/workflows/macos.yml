@@ -1,0 +1,49 @@
+name: macOS
+
+# 既可作为入口运行（push / PR / 手动），也可被 release.yml 以 workflow_call 复用。
+# 用 macos-15 而非 macos-latest：后者排队更久，且本仓库实测多次排队后被系统取消。
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  # 被 release.yml 调用时它已先跑过 ci.yml，这里跳过以免重复单测；
+  # needs 的 job 被跳过时下游默认也会跳过，故 build 的 if 里显式放行 skipped。
+  test:
+    if: github.event_name != 'workflow_call'
+    uses: ./.github/workflows/ci.yml
+
+  build:
+    name: Build (macOS)
+    needs: test
+    if: always() && (needs.test.result == 'success' || needs.test.result == 'skipped')
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Install Briefcase
+        run: python -m pip install "briefcase==0.3.25"
+
+      - name: Create and build
+        run: |
+          python -m briefcase create
+          python -m briefcase build
+
+      # 未做 Apple 公证，仅 ad-hoc 签名；用户首次打开需在「隐私与安全性」里放行。
+      - name: Package
+        run: python -m briefcase package -p dmg --adhoc-sign
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: NewGAN-Manager-macOS
+          path: dist/*.dmg
+          if-no-files-found: error

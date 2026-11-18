@@ -14,6 +14,7 @@ build/
 dist/
 *.egg-info/
 *.egg
+*.dist-info/
 
 # Unit test / coverage reports
 htmlcov/
@@ -95,8 +96,9 @@ newgan.log
 src/newganmanager/.user/*.json
 src/newganmanager/.user/*.xml
 
-# 测试夹具数据（含超大 RTF 样本）—— 暂不跟踪，项目重构完成后会重新生成测试代码与测试数据
-src/tests/testing_data/
+# 测试夹具数据：已纳入版本控制（约 208 KB），此处不设忽略规则。
+# 注意 .user/ 下为运行时文件名，但夹具里的 .user 是测试必需的初始配置，
+# 一旦缺失 test_profile_manager / test_face_mapper 会直接报错。
 
 # User RTF exports (personal data, never commit)
 src/newganmanager/user_rtf/

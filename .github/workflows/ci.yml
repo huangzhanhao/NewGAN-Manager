@@ -1,0 +1,27 @@
+name: CI
+
+# 单测门禁：push / PR 全分支运行，也被三端构建与 Release 流程复用（workflow_call）。
+# 测试只依赖标准库：requirements.txt 含 toga-winforms、pythonnet 等 Windows 专属包，
+# 在 Linux runner 上装不上，因此不在此安装运行时依赖。
+# Python 用 3.12 次版本号而非精确补丁号：runner 镜像更新（如 ubuntu-latest 已到 26.04）
+# 后 setup-python 的版本清单里未必有精确补丁号，次版本号会解析到可用的最新 3.12.x，
+# 仍满足 pyproject.toml 的 requires-python（>=3.12）。
+on:
+  push:
+    branches: ["*"]
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Run unit tests
+        env:
+          PYTHONPATH: src
+        run: python -m unittest discover -s src/tests -p "test*.py" -v

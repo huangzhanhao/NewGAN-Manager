@@ -3,20 +3,23 @@
 #
 # This file contains the dependencies needed for development on Windows.
 # 此文件包含在 Windows 上开发所需的依赖项。
+# 版本与 requirements.txt / pyproject.toml 保持一致（toga 0.5.7 线）。
 
 briefcase==0.3.25
 certifi==2025.10.5
 cffi==2.0.0
 charset-normalizer==3.4.3
 clr_loader==0.2.7.post0
+dhooks==1.1.4
+dotnet-WebView2.WinForms==1.0.4314.35
 idna==3.10
 pillow==11.3.0
 pycparser==2.23
 pythonnet==3.0.5
-requests==2.32.5
-toga==0.5.2
-toga-core==0.5.2
-toga-winforms==0.5.2
-travertino==0.5.2
+requests==2.34.2
+toga==0.5.7
+toga-core==0.5.7
+toga-winforms==0.5.7
+travertino==0.5.7
+typing_extensions==4.16.0
 urllib3==2.5.0
-dhooks==1.1.4

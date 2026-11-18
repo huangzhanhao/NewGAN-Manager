@@ -28,7 +28,7 @@ class NewGANManager(toga.App):
         super().__init__(
             formal_name="NewGAN Manager",
             app_id="com.fm.newganmanager",
-            home_page="https://github.com/huangzhanhao/NewGAN-Manager-ByHzH",
+            home_page="https://github.com/huangzhanhao/NewGAN-Manager",
         )
 
         self.logger: logging.Logger = logging.getLogger("NewGAN App")

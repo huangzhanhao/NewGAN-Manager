@@ -5,6 +5,9 @@ import unittest
 import sys
 import os
 import shutil
+import tempfile
+
+import testutils
 
 # 添加项目根目录到Python路径
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'newganmanager'))
@@ -21,43 +24,26 @@ class TestIntegration(unittest.TestCase):
 
     def setUp(self):
         """
-        测试前准备
+        测试前准备：把夹具复制到临时目录，避免污染 git 跟踪的 testing_data
         """
-        self.test_data_dir = os.path.join(os.path.dirname(__file__), "testing_data")
+        self._tmp_root = tempfile.mkdtemp(prefix="newgan_app_")
+        self.test_data_dir = os.path.join(self._tmp_root, "testing_data")
+        shutil.copytree(testutils.TESTING_DATA, self.test_data_dir)
         self.app_path = os.path.join(os.path.dirname(__file__), "..", "newganmanager")
-        
+
         # 复制必要的配置文件
-        if not os.path.exists(os.path.join(self.test_data_dir, ".user")):
-            os.makedirs(os.path.join(self.test_data_dir, ".user"))
-            
+        user_dir = os.path.join(self.test_data_dir, ".user")
+        os.makedirs(user_dir, exist_ok=True)
         shutil.copyfile(
             os.path.join(self.app_path, ".user", "default_cfg.json"),
-            os.path.join(self.test_data_dir, ".user", "cfg.json")
+            os.path.join(user_dir, "cfg.json")
         )
 
     def tearDown(self):
         """
-        测试后清理
+        测试后清理：只删除临时副本
         """
-        # 清理测试生成的文件
-        test_files = [
-            os.path.join(self.test_data_dir, ".user", "cfg.json"),
-            os.path.join(self.test_data_dir, ".user", "test_profile.json"),
-            os.path.join(self.test_data_dir, ".user", "test_profile.xml"),
-            os.path.join(self.test_data_dir, "config.xml")
-        ]
-        
-        for file_path in test_files:
-            if os.path.exists(file_path):
-                os.remove(file_path)
-                
-        test_dirs = [
-            os.path.join(self.test_data_dir, ".user")
-        ]
-        
-        for dir_path in test_dirs:
-            if os.path.exists(dir_path) and os.path.isdir(dir_path):
-                shutil.rmtree(dir_path, ignore_errors=True)
+        shutil.rmtree(self._tmp_root, ignore_errors=True)
 
 
 class TestAppInitialization(TestIntegration):

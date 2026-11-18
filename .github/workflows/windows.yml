@@ -1,0 +1,50 @@
+name: Windows
+
+# 既可作为入口运行（push / PR / 手动），也可被 release.yml 以 workflow_call 复用。
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  # 被 release.yml 调用时它已先跑过 ci.yml，这里跳过以免重复单测；
+  # needs 的 job 被跳过时下游默认也会跳过，故 build 的 if 里显式放行 skipped。
+  test:
+    if: github.event_name != 'workflow_call'
+    uses: ./.github/workflows/ci.yml
+
+  build:
+    name: Build (Windows)
+    needs: test
+    if: always() && (needs.test.result == 'success' || needs.test.result == 'skipped')
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      # 固定 0.3.25：0.4.7 的 Windows 应用模板引用 LICENSE.rtf，但 briefcase 0.4.7
+      # 的 install_license() 并未接线（install_app_resources 只调 super），
+      # 打包必然报 WIX0103；0.3.x 模板不含许可对话框，无需该文件。
+      - name: Install Briefcase
+        run: python -m pip install "briefcase==0.3.25"
+
+      - name: Create and build
+        run: |
+          python -m briefcase create
+          python -m briefcase build
+
+      - name: Package
+        run: python -m briefcase package -p msi --adhoc-sign
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: NewGAN-Manager-Windows
+          path: dist/*.msi
+          if-no-files-found: error
